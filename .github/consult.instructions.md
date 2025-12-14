@@ -1,7 +1,7 @@
 ---
 description: "Instructions for consulting AI models during development."
 ---
-Whenever you consult or meditate, choose an ollama model from this list:
+Whenever you consult or meditate, choose an ollama model from this list, you should use a long timeout (10000+) for larger models like kimi-k2-thinking:
 - `llama3.2:latest` - with a high timeout;
 - `kimi-k2-thinking:cloud` - for creative brainstorming;
 - `deepseek-v3.1:671b-cloud` - for in-depth analysis;

@@ -42,7 +42,11 @@ class RetroIDEServer {
             .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
             .header { text-align: center; border-bottom: 1px solid #00ff00; padding-bottom: 20px; }
             .tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-            .tool { border: 1px solid #00ff00; padding: 15px; background: #001100; }
+            .tool { border: 1px solid #00ff00; padding: 15px; background: #001100; margin: 10px; }
+            .tool:hover { background: #002200; }
+            .opacity-slider { margin-top: 10px; }
+            .opacity-slider input { width: 100%; }
+            .opacity-display { font-size: 12px; color: #88ff88; margin-top: 5px; }
             button { background: #004400; color: #00ff00; border: 1px solid #00ff00; padding: 10px; cursor: pointer; }
             button:hover { background: #006600; }
           </style>
@@ -63,20 +67,78 @@ class RetroIDEServer {
               data.tools.forEach(tool => {
                 const toolDiv = document.createElement('div');
                 toolDiv.className = 'tool';
+                let extraControls = '';
+
+                if (tool.name === 'edit_instruction_file') {
+                  extraControls = \`
+                    <div class="opacity-slider">
+                      <label>Code Opacity: <span id="opacity-\${tool.name}">100</span>%</label>
+                      <input type="range" min="0" max="100" value="100" id="slider-\${tool.name}"
+                             oninput="updateOpacity('\${tool.name}', this.value)">
+                      <div class="opacity-display" id="display-\${tool.name}">Full visibility - all code shown</div>
+                    </div>
+                  \`;
+                }
+
                 toolDiv.innerHTML = \`
-                  <h3>\${tool.name}</h3>
+                  <h3>\${tool.name.replace(/_/g, ' ')}</h3>
                   <p>\${tool.description}</p>
+                  \${extraControls}
                   <button onclick="runTool('\${tool.name}')">Execute</button>
                 \`;
                 toolsDiv.appendChild(toolDiv);
               });
             }
 
+            function updateOpacity(toolName, value) {
+              document.getElementById(\`opacity-\${toolName}\`).textContent = value;
+              const display = document.getElementById(\`display-\${toolName}\`);
+              if (value == 0) {
+                display.textContent = 'Interface only - ports and connections visible';
+              } else if (value < 50) {
+                display.textContent = 'Fuzzy preview - structure with blurred details';
+              } else {
+                display.textContent = 'Full visibility - all code shown';
+              }
+            }
+
             async function runTool(name) {
+              let args = {};
+
+              if (name === 'edit_instruction_file') {
+                const opacity = document.getElementById(\`slider-\${name}\`).value;
+                args = {
+                  filename: 'main.asm',
+                  content: 'LDA #$01\\nSTA $2000',
+                  platform: 'nes'
+                };
+                // Also set opacity
+                await fetch('/api/call', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: 'set_code_opacity',
+                    arguments: { filename: 'main.asm', opacity: parseInt(opacity) }
+                  })
+                });
+              } else if (name === 'create_retro_project') {
+                args = { platform: 'nes', projectName: 'CircuitQuest' };
+              } else if (name === 'generate_sprite') {
+                args = { width: 16, height: 16, colors: 4 };
+              } else if (name === 'create_asset') {
+                args = { type: 'sprite', name: 'hero', platform: 'nes', parameters: { width: 16, height: 16 } };
+              } else if (name === 'compile_rom') {
+                args = { sourceFiles: ['main.asm'], platform: 'nes' };
+              } else if (name === 'build_and_test') {
+                args = { projectName: 'CircuitQuest', testMode: true };
+              } else if (name === 'set_code_opacity') {
+                args = { filename: 'main.asm', opacity: 50 };
+              }
+
               const response = await fetch('/api/call', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, arguments: {} })
+                body: JSON.stringify({ name, arguments: args })
               });
               const result = await response.json();
               alert(JSON.stringify(result, null, 2));
@@ -166,6 +228,18 @@ class RetroIDEServer {
                 testMode: { type: "boolean" }
               },
               required: ["projectName"]
+            }
+          },
+          {
+            name: "set_code_opacity",
+            description: "Set opacity level for code files (0-100%) to control visibility in the circuit-board metropolis",
+            inputSchema: {
+              type: "object",
+              properties: {
+                filename: { type: "string", description: "File to set opacity for" },
+                opacity: { type: "number", minimum: 0, maximum: 100, description: "Opacity percentage (0 = interface only, 100 = full code)" }
+              },
+              required: ["filename", "opacity"]
             }
           }
         ];
@@ -275,17 +349,17 @@ class RetroIDEServer {
             }
           },
           {
-            name: "build_and_test",
-            description: "Build the project and run tests/emulation",
+            name: "set_code_opacity",
+            description: "Set opacity level for code files (0-100%) to control visibility in the circuit-board metropolis",
             inputSchema: {
               type: "object",
               properties: {
-                projectName: { type: "string", description: "Project to build" },
-                testMode: { type: "boolean", description: "Run in test mode" }
+                filename: { type: "string", description: "File to set opacity for" },
+                opacity: { type: "number", minimum: 0, maximum: 100, description: "Opacity percentage (0 = interface only, 100 = full code)" }
               },
-              required: ["projectName"]
+              required: ["filename", "opacity"]
             }
-          }
+          },
         ]
       };
     });
@@ -314,6 +388,9 @@ class RetroIDEServer {
         case "build_and_test":
           const buildArgs = args as { projectName: string; testMode?: boolean };
           return this.buildAndTest(buildArgs.projectName, buildArgs.testMode);
+        case "set_code_opacity":
+          const opacityArgs = args as { filename: string; opacity: number };
+          return this.setCodeOpacity(opacityArgs.filename, opacityArgs.opacity);
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -391,6 +468,20 @@ class RetroIDEServer {
         {
           type: "text",
           text: `Built and tested project "${projectName}"${testText}. Circuit-board metropolis workflow completed.`
+        }
+      ]
+    };
+  }
+
+  private async setCodeOpacity(filename: string, opacity: number) {
+    // In a real implementation, this would persist opacity settings
+    // For now, just acknowledge the setting
+    const visibility = opacity === 0 ? "interface only" : opacity < 50 ? "fuzzy preview" : "full visibility";
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Set opacity of ${filename} to ${opacity}%. Code now shows ${visibility}. Circuit fog adjusted.`
         }
       ]
     };
