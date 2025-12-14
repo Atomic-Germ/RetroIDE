@@ -1,0 +1,33 @@
+{
+  "name": "retroide",
+  "version": "1.0.0",
+  "description": "RetroIDE - Circuit-Board Metropolis IDE for Retro Game Development",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atomic-Germ/RetroIDE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Atomic-Germ/RetroIDE/issues"
+  },
+  "homepage": "https://github.com/Atomic-Germ/RetroIDE#readme",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@types/node": "^25.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "express": "^5.2.1"
+  }
+}
