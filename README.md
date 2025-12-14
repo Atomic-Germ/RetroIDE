@@ -64,6 +64,9 @@ The RetroIDE MCP server provides tools for:
 
 This project embodies concentric fluidity and depletion-triggered fluidity, maintaining dynamic equilibrium in the development process.
 
-## Contributing
+## Documentation
 
-See DEVELOPERS-README.md for detailed development information.
+- **[User Guide](USER_GUIDE.md)**: Comprehensive guide for human users
+- **[API Reference](API_REFERENCE.md)**: Detailed MCP tool specifications
+- **[Model Integration Guide](MODEL_INTEGRATION_GUIDE.md)**: Guide for AI assistants
+- **[Developer Guide](DEVELOPERS-README.md)**: Technical development information
